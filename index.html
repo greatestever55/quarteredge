@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuarterEdge — NBA Quarter Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080a0f;
+    --surface: #0e1118;
+    --surface2: #141820;
+    --border: #1e2433;
+    --accent: #f0b429;
+    --accent2: #e85d04;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #f0f2f7;
+    --muted: #5a6480;
+    --subtle: #2a3042;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(240,180,41,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,180,41,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 48px 0 40px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: #000;
+    letter-spacing: -1px;
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .logo-text span {
+    color: var(--accent);
+  }
+
+  .tagline {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-left: 48px;
+  }
+
+  /* Form */
+  .form-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+
+  .form-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+
+  input::placeholder { color: var(--muted); }
+
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(240,180,41,0.1);
+  }
+
+  .line-row {
+    margin-bottom: 24px;
+  }
+
+  .line-row input {
+    max-width: 200px;
+  }
+
+  .analyze-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .analyze-btn:hover {
+    background: #f5c842;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(240,180,41,0.25);
+  }
+
+  .analyze-btn:active { transform: translateY(0); }
+
+  .analyze-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  /* Results */
+  #results {
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .matchup-header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .matchup-teams {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: -0.3px;
+  }
+
+  .matchup-vs {
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    margin: 0 10px;
+  }
+
+  .verdict-badge {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  .verdict-bet {
+    background: rgba(34,197,94,0.15);
+    color: var(--green);
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+
+  .verdict-skip {
+    background: rgba(239,68,68,0.1);
+    color: var(--red);
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .stat-value.highlight { color: var(--accent); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+
+  .stat-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Over rate bar */
+  .rate-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .rate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .rate-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .rate-pct {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -1px;
+  }
+
+  .progress-track {
+    height: 6px;
+    background: var(--subtle);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+
+  .progress-fill.green { background: var(--green); }
+  .progress-fill.red { background: var(--red); }
+  .progress-fill.amber { background: var(--accent); }
+
+  .threshold-note {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Team comparison */
+  .teams-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .teams-section-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .team-row:last-child { margin-bottom: 0; }
+
+  .team-name-label {
+    font-size: 13px;
+    color: var(--text);
+    width: 180px;
+  }
+
+  .team-stats-row {
+    display: flex;
+    gap: 24px;
+  }
+
+  .team-stat {
+    text-align: right;
+  }
+
+  .team-stat-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--accent);
+  }
+
+  .team-stat-lbl {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* History dots */
+  .history-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .history-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .history-dots {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .history-dot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .dot-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+  }
+
+  .dot-over {
+    background: rgba(34,197,94,0.15);
+    border: 1px solid rgba(34,197,94,0.3);
+    color: var(--green);
+  }
+
+  .dot-under {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: var(--red);
+  }
+
+  .dot-label {
+    font-size: 9px;
+    color: var(--muted);
+  }
+
+  /* Error */
+  .error-card {
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 12px;
+    padding: 20px 24px;
+    color: var(--red);
+    font-size: 13px;
+  }
+
+  /* Footer */
+  footer {
+    padding: 32px 0 48px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    animation: fadeUp 0.6s ease 0.3s both;
+  }
+
+  footer span { color: var(--accent); }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .matchup-header { flex-direction: column; gap: 16px; text-align: center; }
+    .matchup-teams { font-size: 16px; }
+    .team-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">QE</div>
+      <div class="logo-text">Quarter<span>Edge</span></div>
+    </div>
+    <div class="tagline">NBA Highest Scoring Quarter Analytics</div>
+  </header>
+
+  <div class="form-section">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Home Team</label>
+        <input type="text" id="homeTeam" placeholder="e.g. Lakers" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Away Team</label>
+        <input type="text" id="awayTeam" placeholder="e.g. Celtics" autocomplete="off" />
+      </div>
+    </div>
+    <div class="line-row">
+      <label class="form-label">Bookmaker Line</label>
+      <input type="number" id="line" placeholder="e.g. 65.5" step="0.5" />
+    </div>
+    <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btnText">Analyze Matchup</span>
+    </button>
+  </div>
+
+  <div id="results" class="hidden"></div>
+
+  <footer>
+    Powered by <span>QuarterEdge</span> · Real NBA quarter data · 2025-26 season
+  </footer>
+
+</div>
+
+<script>
+const API = 'https://quarteredge-api.onrender.com';
+
+async function analyze() {
+  const home = document.getElementById('homeTeam').value.trim();
+  const away = document.getElementById('awayTeam').value.trim();
+  const line = parseFloat(document.getElementById('line').value);
+
+  if (!home || !away || isNaN(line)) {
+    showError('Please fill in all three fields.');
+    return;
+  }
+
+  setLoading(true);
+  document.getElementById('results').classList.add('hidden');
+
+  try {
+    const res = await fetch(`${API}/api/analyze/${encodeURIComponent(home)}/${encodeURIComponent(away)}/${line}`);
+    const data = await res.json();
+
+    if (data.error) {
+      showError(data.error);
+    } else {
+      showResults(data);
+    }
+  } catch (e) {
+    showError('Could not connect to QuarterEdge API. Try again.');
+  }
+
+  setLoading(false);
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('analyzeBtn');
+  const spinner = document.getElementById('spinner');
+  const text = document.getElementById('btnText');
+  btn.disabled = on;
+  spinner.style.display = on ? 'block' : 'none';
+  text.textContent = on ? 'Analyzing...' : 'Analyze Matchup';
+}
+
+function showError(msg) {
+  const el = document.getElementById('results');
+  el.innerHTML = `<div class="error-card">⚠ ${msg}</div>`;
+  el.classList.remove('hidden');
+}
+
+function showResults(d) {
+  const isBet = d.recommendation === 'BET';
+  const rateColor = d.over_rate >= 70 ? 'green' : d.over_rate >= 60 ? 'amber' : 'red';
+  const rateTextColor = d.over_rate >= 70 ? 'green' : d.over_rate >= 60 ? 'highlight' : 'red';
+
+  const dots = d.combined_highs.map(h => {
+    const over = h > d.line;
+    return `<div class="history-dot">
+      <div class="dot-circle ${over ? 'dot-over' : 'dot-under'}">${h}</div>
+      <div class="dot-label">${over ? 'OVER' : 'UNDR'}</div>
+    </div>`;
+  }).join('');
+
+  const html = `
+    <div class="matchup-header">
+      <div class="matchup-teams">
+        ${d.home_team.split(' ').pop()}
+        <span class="matchup-vs">vs</span>
+        ${d.away_team.split(' ').pop()}
+      </div>
+      <div class="verdict-badge ${isBet ? 'verdict-bet' : 'verdict-skip'}">
+        ${isBet ? '✓ BET' : '✕ SKIP'}
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Line</div>
+        <div class="stat-value highlight">${d.line}</div>
+        <div class="stat-sub">Bookmaker</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Peak</div>
+        <div class="stat-value ${rateTextColor}">${d.avg_combined_peak}</div>
+        <div class="stat-sub">Combined high Q</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Games</div>
+        <div class="stat-value">${d.games_analyzed}</div>
+        <div class="stat-sub">Analyzed</div>
+      </div>
+    </div>
+
+    <div class="rate-section">
+      <div class="rate-header">
+        <div class="rate-title">Over Rate</div>
+        <div class="rate-pct ${rateTextColor}">${d.over_rate}%</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill ${rateColor}" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="threshold-note">Threshold: 60% to BET · ${isBet ? `${d.over_rate}% clears ✓` : `${d.over_rate}% does not clear ✕`}</div>
+    </div>
+
+    <div class="teams-section">
+      <div class="teams-section-title">Team Breakdown</div>
+      <div class="team-row">
+        <div class="team-name-label">${d.home_team}</div>
+        <div class="team-stats-row">
+          <div class="team-stat">
+            <div class="team-stat-val">${d.home_ppg}</div>
+            <div class="team-stat-lbl">PPG</div>
+          </div>
+          <div class="team-stat">
+            <div class="team-stat-val">${d.home_avg_peak_quarter}</div>
+            <div class="team-stat-lbl">Peak Q</div>
+          </div>
+        </div>
+      </div>
+      <div class="team-row">
+        <div class="team-name-label">${d.away_team}</div>
+        <div class="team-stats-row">
+          <div class="team-stat">
+            <div class="team-stat-val">${d.away_ppg}</div>
+            <div class="team-stat-lbl">PPG</div>
+          </div>
+          <div class="team-stat">
+            <div class="team-stat-val">${d.away_avg_peak_quarter}</div>
+            <div class="team-stat-lbl">Peak Q</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="history-section">
+      <div class="history-title">Last ${d.games_analyzed} Games — Combined Peak Quarter</div>
+      <div class="history-dots">${dots}</div>
+    </div>
+  `;
+
+  const el = document.getElementById('results');
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+
+  setTimeout(() => {
+    const fill = document.getElementById('progressFill');
+    if (fill) fill.style.width = d.over_rate + '%';
+  }, 100);
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') analyze();
+});
+</script>
+</body>
+</html>
