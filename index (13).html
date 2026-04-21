@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuarterEdge — NBA Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080a0f; --surface:#0e1118; --surface2:#141820; --border:#1e2433;
+  --accent:#f0b429; --green:#22c55e; --red:#ef4444; --blue:#3b82f6;
+  --warn:#f59e0b; --text:#f0f2f7; --muted:#5a6480; --subtle:#2a3042;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(240,180,41,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(240,180,41,0.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0;}
+.container{max-width:780px;margin:0 auto;padding:0 20px;position:relative;z-index:1;}
+
+/* Header */
+header{padding:44px 0 32px;animation:fadeDown .6s ease both;}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.logo-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:#000;}
+.logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-.5px;}
+.logo-text span{color:var(--accent);}
+.tagline{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-left:48px;}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:14px;}
+.card.anim{animation:fadeUp .6s ease both;}
+.sec-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Form inputs */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.form-group{display:flex;flex-direction:column;}
+.flabel{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block;}
+input[type=text],input[type=number]{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;width:100%;}
+input::placeholder{color:var(--muted);font-size:12px;}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(240,180,41,.1);}
+
+/* Toggles */
+.toggles-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.toggle-btn{padding:8px 14px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all .2s;user-select:none;}
+.toggle-btn.active{background:rgba(240,180,41,.1);border-color:var(--accent);color:var(--accent);}
+.toggle-btn.active.danger{background:rgba(239,68,68,.08);border-color:var(--red);color:var(--red);}
+
+/* Market cards */
+.markets-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.mcard{background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.mcard-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none;transition:background .15s;}
+.mcard-header:hover{background:rgba(240,180,41,.04);}
+.mcard.active .mcard-header{background:rgba(240,180,41,.06);}
+.mcard.active{border-color:var(--accent);}
+.mcard-name{font-size:11px;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.3px;}
+.mcard-toggle{width:20px;height:20px;border-radius:5px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s;flex-shrink:0;}
+.mcard.active .mcard-toggle{background:var(--accent);border-color:var(--accent);color:#000;}
+.mcard-inputs{display:none;padding:0 14px 12px;gap:8px;}
+.mcard.active .mcard-inputs{display:flex;}
+.mi-group{flex:1;}
+.mi-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;display:block;}
+.mi-input{padding:9px 10px;font-size:12px;border-radius:7px;}
+
+/* Winner market */
+.winner-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+
+/* Analyze button */
+.analyze-btn{width:100%;padding:15px;background:var(--accent);color:#000;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;letter-spacing:.5px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.analyze-btn:hover{background:#f5c842;transform:translateY(-1px);box-shadow:0 8px 24px rgba(240,180,41,.25);}
+.analyze-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.spinner{width:16px;height:16px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+
+/* Results */
+.matchup-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.matchup-teams{font-family:'Syne',sans-serif;font-weight:700;font-size:20px;letter-spacing:-.3px;}
+.mvs{color:var(--muted);font-size:12px;margin:0 8px;}
+.meta-chips{display:flex;gap:6px;flex-wrap:wrap;}
+.mchip{font-size:9px;padding:4px 9px;border-radius:4px;letter-spacing:.5px;}
+.mc-gold{background:rgba(240,180,41,.1);color:var(--accent);border:1px solid rgba(240,180,41,.2);}
+.mc-red{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.2);}
+.mc-blue{background:rgba(59,130,246,.08);color:var(--blue);border:1px solid rgba(59,130,246,.2);}
+.mc-warn{background:rgba(245,158,11,.08);color:var(--warn);border:1px solid rgba(245,158,11,.2);}
+
+/* Lambda display */
+.lambda-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;}
+.lam-item{background:var(--surface2);border-radius:8px;padding:10px;text-align:center;}
+.lam-val{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--accent);}
+.lam-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+
+/* Team row */
+.team-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.team-row:last-child{margin-bottom:0;}
+.tname{font-size:13px;min-width:170px;}
+.tstats{display:flex;gap:18px;}
+.ts{text-align:right;}
+.ts-val{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--accent);}
+.ts-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.cons-row{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.cons-item{flex:1;background:var(--surface2);border-radius:8px;padding:11px;}
+.cons-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+.cons-val{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;}
+.cons-note{font-size:9px;color:var(--muted);margin-top:2px;}
+
+/* Market result */
+.mr{margin-bottom:14px;}
+.mr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.mr-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+.mr-sub{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:3px;}
+.verdict{padding:8px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;letter-spacing:.5px;white-space:nowrap;}
+.v-bet{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25);}
+.v-nobet{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.2);}
+
+/* Stats grid */
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.stat-box{background:var(--surface2);border-radius:8px;padding:11px;text-align:center;}
+.stat-val{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;line-height:1;}
+.stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;}
+
+/* EV row */
+.ev-row{display:flex;gap:8px;margin-bottom:14px;}
+.ev-box{flex:1;border-radius:8px;padding:11px 13px;}
+.ev-pos{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);}
+.ev-neg{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);}
+.ev-neu{background:var(--surface2);border:1px solid var(--border);}
+.ev-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+.ev-val{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;}
+
+/* Progress */
+.prog-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.prog-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+.prog-pct{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;letter-spacing:-1px;}
+.prog-track{height:5px;background:var(--subtle);border-radius:999px;overflow:hidden;margin-bottom:6px;}
+.prog-fill{height:100%;border-radius:999px;transition:width 1s cubic-bezier(.4,0,.2,1);width:0%;}
+.pf-g{background:var(--green);}
+.pf-a{background:var(--accent);}
+.pf-r{background:var(--red);}
+.prog-note{font-size:10px;color:var(--muted);}
+
+/* History */
+.hdots{display:flex;gap:5px;flex-wrap:wrap;margin-top:14px;}
+.hdot{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.hdot-c{width:36px;height:36px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:9px;}
+.hd-over{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:var(--green);}
+.hd-under{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);color:var(--red);}
+.hdot-l{font-size:8px;color:var(--muted);}
+
+/* Winner market */
+.winner-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.win-side{background:var(--surface2);border-radius:10px;padding:16px;text-align:center;}
+.win-team{font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;}
+.win-prob{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px;margin-bottom:8px;}
+.win-badge{display:inline-block;padding:5px 12px;border-radius:5px;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;}
+
+/* Error */
+.err-card{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px 18px;color:var(--red);font-size:12px;}
+
+footer{padding:28px 0 48px;text-align:center;font-size:11px;color:var(--muted);letter-spacing:1px;}
+footer span{color:var(--accent);}
+.hidden{display:none!important;}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){
+  .form-row,.markets-grid,.winner-row,.stats4,.ev-row,.cons-row{grid-template-columns:1fr;}
+  .matchup-bar{flex-direction:column;}
+  .team-row{flex-direction:column;align-items:flex-start;gap:6px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">QE</div>
+    <div class="logo-text">Quarter<span>Edge</span></div>
+  </div>
+  <div class="tagline">NBA Multi-Market Analytics Engine</div>
+</header>
+
+<!-- Teams -->
+<div class="card anim" style="animation-delay:.05s">
+  <div class="sec-title">Teams</div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="flabel">Home Team</label>
+      <input type="text" id="homeTeam" placeholder="e.g. Lakers" autocomplete="off"/>
+    </div>
+    <div class="form-group">
+      <label class="flabel">Away Team</label>
+      <input type="text" id="awayTeam" placeholder="e.g. Celtics" autocomplete="off"/>
+    </div>
+  </div>
+
+  <!-- Game flags -->
+  <div class="sec-title">Game Context</div>
+  <div class="toggles-row">
+    <div class="toggle-btn" id="tog-home_b2b" onclick="toggleFlag('home_b2b',this)">🏠 Home B2B</div>
+    <div class="toggle-btn" id="tog-away_b2b" onclick="toggleFlag('away_b2b',this)">✈️ Away B2B</div>
+    <div class="toggle-btn danger" id="tog-home_injury" onclick="toggleFlag('home_injury',this)">🏠 Home Injury</div>
+    <div class="toggle-btn danger" id="tog-away_injury" onclick="toggleFlag('away_injury',this)">✈️ Away Injury</div>
+    <div class="toggle-btn" id="tog-playoff" onclick="toggleFlag('playoff',this)">🏆 Playoff</div>
+  </div>
+</div>
+
+<!-- Markets -->
+<div class="card anim" style="animation-delay:.1s">
+  <div class="sec-title">Markets — tap to activate</div>
+  <div class="markets-grid" id="marketsGrid">
+
+    <div class="mcard" id="mc-hsq">
+      <div class="mcard-header" id="mh-hsq">
+        <div class="mcard-name">Highest Scoring Q</div>
+        <div class="mcard-toggle" id="mt-hsq">+</div>
+      </div>
+      <div class="mcard-inputs" id="mi-hsq">
+        <div class="mi-group"><label class="mi-label">Line</label><input type="number" class="mi-input" id="hsq_line" placeholder="62.5" step="0.5"/></div>
+        <div class="mi-group"><label class="mi-label">Odds</label><input type="number" class="mi-input" id="hsq_odds" placeholder="1.92" step="0.01"/></div>
+      </div>
+    </div>
+
+    <div class="mcard" id="mc-lsq">
+      <div class="mcard-header" id="mh-lsq">
+        <div class="mcard-name">Lowest Scoring Q</div>
+        <div class="mcard-toggle" id="mt-lsq">+</div>
+      </div>
+      <div class="mcard-inputs" id="mi-lsq">
+        <div class="mi-group"><label class="mi-label">Line</label><input type="number" class="mi-input" id="lsq_line" placeholder="22.5" step="0.5"/></div>
+        <div class="mi-group"><label class="mi-label">Odds</label><input type="number" class="mi-input" id="lsq_odds" placeholder="1.85" step="0.01"/></div>
+      </div>
+    </div>
+
+    <div class="mcard" id="mc-q1">
+      <div class="mcard-header" id="mh-q1">
+        <div class="mcard-name">1st Quarter O/U</div>
+        <div class="mcard-toggle" id="mt-q1">+</div>
+      </div>
+      <div class="mcard-inputs" id="mi-q1">
+        <div class="mi-group"><label class="mi-label">Line</label><input type="number" class="mi-input" id="q1_line" placeholder="28.5" step="0.5"/></div>
+        <div class="mi-group"><label class="mi-label">Odds</label><input type="number" class="mi-input" id="q1_odds" placeholder="1.90" step="0.01"/></div>
+      </div>
+    </div>
+
+    <div class="mcard" id="mc-h1">
+      <div class="mcard-header" id="mh-h1">
+        <div class="mcard-name">1st Half O/U</div>
+        <div class="mcard-toggle" id="mt-h1">+</div>
+      </div>
+      <div class="mcard-inputs" id="mi-h1">
+        <div class="mi-group"><label class="mi-label">Line</label><input type="number" class="mi-input" id="h1_line" placeholder="115.5" step="0.5"/></div>
+        <div class="mi-group"><label class="mi-label">Odds</label><input type="number" class="mi-input" id="h1_odds" placeholder="1.88" step="0.01"/></div>
+      </div>
+    </div>
+
+    <div class="mcard" id="mc-total">
+      <div class="mcard-header" id="mh-total">
+        <div class="mcard-name">Total O/U (incl. OT)</div>
+        <div class="mcard-toggle" id="mt-total">+</div>
+      </div>
+      <div class="mcard-inputs" id="mi-total">
+        <div class="mi-group"><label class="mi-label">Line</label><input type="number" class="mi-input" id="total_line" placeholder="228.5" step="0.5"/></div>
+        <div class="mi-group"><label class="mi-label">Odds</label><input type="number" class="mi-input" id="total_odds" placeholder="1.90" step="0.01"/></div>
+      </div>
+    </div>
+
+    <div class="mcard" id="mc-winner">
+      <div class="mcard-header" id="mh-winner">
+        <div class="mcard-name">Winner incl. OT</div>
+        <div class="mcard-toggle" id="mt-winner">+</div>
+      </div>
+      <div class="mcard-inputs" id="mi-winner" style="flex-direction:column;gap:6px;">
+        <div style="display:flex;gap:8px;">
+          <div class="mi-group"><label class="mi-label">Home Odds</label><input type="number" class="mi-input" id="winner_home_odds" placeholder="2.10" step="0.01"/></div>
+          <div class="mi-group"><label class="mi-label">Away Odds</label><input type="number" class="mi-input" id="winner_away_odds" placeholder="1.75" step="0.01"/></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+    <div class="spinner" id="spinner"></div>
+    <span id="btnText">Analyze Matchup</span>
+  </button>
+</div>
+
+<div id="results" class="hidden"></div>
+
+<footer>Powered by <span>QuarterEdge</span> · Bivariate Poisson · Order Statistics · EV Engine</footer>
+</div>
+
+<script>
+const API = 'https://quarteredge-api.onrender.com';
+const activeMarkets = new Set();
+const activeFlags = new Set();
+
+// Market header click handlers
+document.addEventListener('DOMContentLoaded', () => {
+  ['hsq','lsq','q1','h1','total','winner'].forEach(key => {
+    document.getElementById('mh-' + key).addEventListener('click', () => {
+      const card = document.getElementById('mc-' + key);
+      const toggle = document.getElementById('mt-' + key);
+      if (activeMarkets.has(key)) {
+        activeMarkets.delete(key);
+        card.classList.remove('active');
+        toggle.textContent = '+';
+      } else {
+        activeMarkets.add(key);
+        card.classList.add('active');
+        toggle.textContent = '✓';
+      }
+    });
+  });
+});
+
+function toggleFlag(key, el) {
+  if (activeFlags.has(key)) {
+    activeFlags.delete(key);
+    el.classList.remove('active');
+  } else {
+    activeFlags.add(key);
+    el.classList.add('active');
+  }
+}
+
+function setLoading(on) {
+  document.getElementById('analyzeBtn').disabled = on;
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('btnText').textContent = on ? 'Analyzing...' : 'Analyze Matchup';
+}
+
+function showError(msg) {
+  const el = document.getElementById('results');
+  el.innerHTML = `<div class="err-card">⚠ ${msg}</div>`;
+  el.classList.remove('hidden');
+}
+
+async function analyze() {
+  const home = document.getElementById('homeTeam').value.trim();
+  const away = document.getElementById('awayTeam').value.trim();
+  if (!home || !away) { showError('Please enter both team names.'); return; }
+  if (activeMarkets.size === 0) { showError('Please activate at least one market.'); return; }
+
+  const params = new URLSearchParams();
+  for (const f of activeFlags) params.append(f, 'true');
+
+  for (const key of activeMarkets) {
+    if (key === 'winner') {
+      const ho = document.getElementById('winner_home_odds')?.value;
+      const ao = document.getElementById('winner_away_odds')?.value;
+      if (ho) params.append('winner_home_odds', ho);
+      if (ao) params.append('winner_away_odds', ao);
+    } else {
+      const line = document.getElementById(key + '_line')?.value;
+      const odds = document.getElementById(key + '_odds')?.value;
+      if (!line) { showError(`Please enter a line for the ${key.toUpperCase()} market.`); return; }
+      params.append(key + '_line', line);
+      if (odds) params.append(key + '_odds', odds);
+    }
+  }
+
+  setLoading(true);
+  document.getElementById('results').classList.add('hidden');
+
+  try {
+    const res = await fetch(`${API}/api/analyze/${encodeURIComponent(home)}/${encodeURIComponent(away)}?${params}`);
+    const data = await res.json();
+    if (data.error) showError(data.error);
+    else renderResults(data);
+  } catch(e) {
+    showError('Could not connect to QuarterEdge API. Try again.');
+  }
+  setLoading(false);
+}
+
+function rc(rate) {
+  return rate >= 70 ? 'var(--green)' : rate >= 60 ? 'var(--accent)' : 'var(--red)';
+}
+
+function pfClass(rate) {
+  return rate >= 70 ? 'pf-g' : rate >= 60 ? 'pf-a' : 'pf-r';
+}
+
+function evClass(ev) {
+  if (ev === null || ev === undefined) return 'ev-neu';
+  return ev > 0 ? 'ev-pos' : 'ev-neg';
+}
+
+function renderMarket(m, fillId, historyLine) {
+  const isBet = m.recommendation === 'BET';
+  const prob = m.prob;
+  const hasOdds = m.odds && m.ev !== null && m.ev !== undefined;
+
+  const evRow = hasOdds ? `
+    <div class="ev-row">
+      <div class="ev-box ev-neu">
+        <div class="ev-lbl">Our Probability</div>
+        <div class="ev-val" style="color:${rc(prob)}">${prob}%</div>
+      </div>
+      <div class="ev-box ev-neu">
+        <div class="ev-lbl">Implied Prob</div>
+        <div class="ev-val">${m.implied_prob}%</div>
+      </div>
+      <div class="ev-box ${evClass(m.ev)}">
+        <div class="ev-lbl">Expected Value</div>
+        <div class="ev-val" style="color:${m.ev > 0 ? 'var(--green)' : 'var(--red)'}">${m.ev > 0 ? '+' : ''}${m.ev}%</div>
+      </div>
+      <div class="ev-box ${m.edge > 0 ? 'ev-pos' : 'ev-neg'}">
+        <div class="ev-lbl">Edge</div>
+        <div class="ev-val" style="color:${m.edge > 0 ? 'var(--green)' : 'var(--red)'}">${m.edge > 0 ? '+' : ''}${m.edge}%</div>
+      </div>
+    </div>` : '';
+
+  return `
+    <div class="card mr" style="animation:fadeUp .4s ease both">
+      <div class="mr-head">
+        <div>
+          <div class="mr-title">${m.label}</div>
+          <div class="mr-sub">Line: ${m.line}${m.odds ? ' · Odds: ' + m.odds : ''}</div>
+        </div>
+        <div class="verdict ${isBet ? 'v-bet' : 'v-nobet'}">${isBet ? '✓ BET' : '✕ NO BET'}</div>
+      </div>
+      ${evRow}
+      <div class="prog-head">
+        <div class="prog-lbl">Confidence</div>
+        <div class="prog-pct" style="color:${rc(prob)}">${prob}%</div>
+      </div>
+      <div class="prog-track"><div class="prog-fill ${pfClass(prob)}" id="${fillId}" style="width:0%"></div></div>
+      <div class="prog-note">Threshold: 60% · ${isBet ? prob + '% clears ✓' : prob + '% does not clear ✕'}</div>
+    </div>`;
+}
+
+function renderWinner(w, homeName, awayName) {
+  function side(name, prob, rec, ev, edge, implied) {
+    const isBet = rec === 'BET';
+    const hasOdds = ev !== null && ev !== undefined;
+    return `
+      <div class="win-side">
+        <div class="win-team">${name}</div>
+        <div class="win-prob" style="color:${rc(prob)}">${prob}%</div>
+        <div class="win-badge ${isBet ? 'v-bet' : 'v-nobet'}" style="margin-bottom:${hasOdds?'10px':'0'}">${isBet ? '✓ BET' : '✕ NO BET'}</div>
+        ${hasOdds ? `
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
+          <div class="ev-box ${ev > 0 ? 'ev-pos' : 'ev-neg'}" style="text-align:left">
+            <div class="ev-lbl">EV</div>
+            <div class="ev-val" style="color:${ev > 0 ? 'var(--green)' : 'var(--red)'}">${ev > 0 ? '+' : ''}${ev}%</div>
+          </div>
+          <div class="ev-box ${edge > 0 ? 'ev-pos' : 'ev-neg'}" style="text-align:left">
+            <div class="ev-lbl">Edge</div>
+            <div class="ev-val" style="color:${edge > 0 ? 'var(--green)' : 'var(--red)'}">${edge > 0 ? '+' : ''}${edge}%</div>
+          </div>
+        </div>` : ''}
+      </div>`;
+  }
+
+  return `
+    <div class="card" style="animation:fadeUp .4s ease both">
+      <div class="mr-head">
+        <div><div class="mr-title">Winner incl. OT</div><div class="mr-sub">Tie at regulation: ${w.tie_prob}%</div></div>
+      </div>
+      <div class="winner-split">
+        ${side(homeName, w.home_win_prob, w.home_recommendation, w.home_ev, w.home_edge, w.home_implied)}
+        ${side(awayName, w.away_win_prob, w.away_recommendation, w.away_ev, w.away_edge, w.away_implied)}
+      </div>
+    </div>`;
+}
+
+function renderResults(d) {
+  const flags = d.flags;
+  const flagChips = [
+    flags.home_b2b ? `<span class="mchip mc-warn">🏠 B2B</span>` : '',
+    flags.away_b2b ? `<span class="mchip mc-warn">✈️ B2B</span>` : '',
+    flags.home_injury ? `<span class="mchip mc-red">🏠 Injury</span>` : '',
+    flags.away_injury ? `<span class="mchip mc-red">✈️ Injury</span>` : '',
+    flags.playoff ? `<span class="mchip mc-blue">🏆 Playoff</span>` : '',
+    d.blowouts_excluded > 0 ? `<span class="mchip mc-red">⚡ ${d.blowouts_excluded} blowouts filtered</span>` : '',
+  ].filter(Boolean).join('');
+
+  const homeName = d.home_team.split(' ').pop();
+  const awayName = d.away_team.split(' ').pop();
+
+  const lamRow = (lams, label) => lams.map((l, i) =>
+    `<div class="lam-item"><div class="lam-val">${l}</div><div class="lam-lbl">${label} Q${i+1}</div></div>`
+  ).join('');
+
+  let html = `
+    <div class="card" style="animation:fadeUp .35s ease both">
+      <div class="matchup-bar">
+        <div class="matchup-teams">${homeName}<span class="mvs">vs</span>${awayName}</div>
+        <div class="meta-chips">
+          <span class="mchip mc-gold">${d.games_analyzed} games</span>
+          ${flagChips}
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="animation:fadeUp .4s ease both">
+      <div class="sec-title">Team Breakdown</div>
+      <div class="team-row">
+        <div class="tname">${d.home_team}</div>
+        <div class="tstats">
+          <div class="ts"><div class="ts-val">${d.home_ppg}</div><div class="ts-lbl">PPG</div></div>
+        </div>
+      </div>
+      <div class="team-row">
+        <div class="tname">${d.away_team}</div>
+        <div class="tstats">
+          <div class="ts"><div class="ts-val">${d.away_ppg}</div><div class="ts-lbl">PPG</div></div>
+        </div>
+      </div>
+      <div class="cons-row">
+        <div class="cons-item">
+          <div class="cons-lbl">${homeName} Consistency</div>
+          <div class="cons-val" style="color:${d.home_consistency < 5 ? 'var(--green)' : d.home_consistency < 8 ? 'var(--accent)' : 'var(--red)'}">${d.home_consistency}</div>
+          <div class="cons-note">${d.home_consistency < 5 ? 'Very consistent' : d.home_consistency < 8 ? 'Moderate noise' : 'High noise — caution'}</div>
+        </div>
+        <div class="cons-item">
+          <div class="cons-lbl">${awayName} Consistency</div>
+          <div class="cons-val" style="color:${d.away_consistency < 5 ? 'var(--green)' : d.away_consistency < 8 ? 'var(--accent)' : 'var(--red)'}">${d.away_consistency}</div>
+          <div class="cons-note">${d.away_consistency < 5 ? 'Very consistent' : d.away_consistency < 8 ? 'Moderate noise' : 'High noise — caution'}</div>
+        </div>
+      </div>
+      <div class="sec-title" style="margin-top:14px;">Projected λ per Quarter</div>
+      <div class="lambda-grid">
+        ${lamRow(d.home_lambda, homeName)}
+      </div>
+      <div class="lambda-grid" style="margin-top:8px;">
+        ${lamRow(d.away_lambda, awayName)}
+      </div>
+    </div>`;
+
+  const fills = [];
+  const m = d.markets;
+
+  if (m.highest_scoring_quarter) {
+    fills.push({id:'pf-hsq', rate: m.highest_scoring_quarter.prob});
+    html += renderMarket(m.highest_scoring_quarter, 'pf-hsq');
+  }
+  if (m.lowest_scoring_quarter) {
+    fills.push({id:'pf-lsq', rate: m.lowest_scoring_quarter.prob});
+    html += renderMarket(m.lowest_scoring_quarter, 'pf-lsq');
+  }
+  if (m.first_quarter) {
+    fills.push({id:'pf-q1', rate: m.first_quarter.prob});
+    html += renderMarket(m.first_quarter, 'pf-q1');
+  }
+  if (m.first_half) {
+    fills.push({id:'pf-h1', rate: m.first_half.prob});
+    html += renderMarket(m.first_half, 'pf-h1');
+  }
+  if (m.total) {
+    fills.push({id:'pf-total', rate: m.total.prob});
+    html += renderMarket(m.total, 'pf-total');
+  }
+  if (m.winner) {
+    html += renderWinner(m.winner, d.home_team, d.away_team);
+  }
+
+  const el = document.getElementById('results');
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+
+  setTimeout(() => {
+    fills.forEach(f => {
+      const el = document.getElementById(f.id);
+      if (el) el.style.width = f.rate + '%';
+    });
+  }, 100);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') analyze(); });
+</script>
+</body>
+</html>
